@@ -1,10 +1,13 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Download, FileText, Code, Database, ArrowLeft } from "lucide-react";
+import { Download, FileText, Code, Database, ArrowLeft, FileType, File } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import jsPDF from "jspdf";
+import { useState } from "react";
 
 export default function ExportDocs() {
   const navigate = useNavigate();
+  const [generating, setGenerating] = useState(false);
 
   const handleDownload = (filename: string) => {
     const link = document.createElement('a');
@@ -13,6 +16,128 @@ export default function ExportDocs() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const handleDownloadTXT = async () => {
+    try {
+      const response = await fetch('/docs/PROJECT_BLUEPRINT.md');
+      const content = await response.text();
+      
+      const blob = new Blob([content], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'PROJECT_BLUEPRINT.txt';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error downloading TXT:', error);
+    }
+  };
+
+  const handleDownloadPDF = async () => {
+    setGenerating(true);
+    try {
+      const response = await fetch('/docs/PROJECT_BLUEPRINT.md');
+      const content = await response.text();
+      
+      const pdf = new jsPDF();
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 15;
+      const maxWidth = pageWidth - 2 * margin;
+      const lineHeight = 6;
+      let y = margin;
+
+      // Title
+      pdf.setFontSize(20);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('SysThemPlus - Project Blueprint', margin, y);
+      y += 15;
+
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'normal');
+
+      const lines = content.split('\n');
+      
+      for (const line of lines) {
+        // Handle headers
+        if (line.startsWith('# ')) {
+          y += 8;
+          pdf.setFontSize(16);
+          pdf.setFont('helvetica', 'bold');
+          const text = line.replace('# ', '');
+          pdf.text(text, margin, y);
+          y += 10;
+          pdf.setFontSize(10);
+          pdf.setFont('helvetica', 'normal');
+        } else if (line.startsWith('## ')) {
+          y += 6;
+          pdf.setFontSize(13);
+          pdf.setFont('helvetica', 'bold');
+          const text = line.replace('## ', '');
+          pdf.text(text, margin, y);
+          y += 8;
+          pdf.setFontSize(10);
+          pdf.setFont('helvetica', 'normal');
+        } else if (line.startsWith('### ')) {
+          y += 4;
+          pdf.setFontSize(11);
+          pdf.setFont('helvetica', 'bold');
+          const text = line.replace('### ', '');
+          pdf.text(text, margin, y);
+          y += 7;
+          pdf.setFontSize(10);
+          pdf.setFont('helvetica', 'normal');
+        } else if (line.trim()) {
+          // Regular text - wrap long lines
+          const splitLines = pdf.splitTextToSize(line, maxWidth);
+          for (const splitLine of splitLines) {
+            if (y > pageHeight - margin) {
+              pdf.addPage();
+              y = margin;
+            }
+            pdf.text(splitLine, margin, y);
+            y += lineHeight;
+          }
+        } else {
+          y += 3; // Empty line spacing
+        }
+
+        // Check for page break
+        if (y > pageHeight - margin) {
+          pdf.addPage();
+          y = margin;
+        }
+      }
+
+      pdf.save('PROJECT_BLUEPRINT.pdf');
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const handleDownloadJSONTXT = async () => {
+    try {
+      const response = await fetch('/docs/project-schema.json');
+      const content = await response.text();
+      
+      const blob = new Blob([content], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'project-schema.txt';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error downloading TXT:', error);
+    }
   };
 
   return (
@@ -34,79 +159,93 @@ export default function ExportDocs() {
           </p>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2">
-          <Card className="hover:shadow-lg transition-shadow">
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <div className="p-3 rounded-lg bg-primary/10">
-                  <FileText className="w-6 h-6 text-primary" />
-                </div>
-                <div>
-                  <CardTitle>Blueprint Complet</CardTitle>
-                  <CardDescription>Documentation Markdown</CardDescription>
-                </div>
+        {/* Blueprint Downloads */}
+        <Card className="hover:shadow-lg transition-shadow">
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <div className="p-3 rounded-lg bg-primary/10">
+                <FileText className="w-6 h-6 text-primary" />
               </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Contient toute l'architecture du projet, le schéma de base de données, 
-                les edge functions, les composants React, et les instructions de configuration.
-              </p>
-              <ul className="text-sm space-y-1 text-muted-foreground">
-                <li>• Vue d'ensemble du projet</li>
-                <li>• Stack technique complète</li>
-                <li>• Schéma SQL détaillé</li>
-                <li>• Code des Edge Functions</li>
-                <li>• Architecture frontend</li>
-                <li>• Instructions de déploiement</li>
-              </ul>
+              <div>
+                <CardTitle>Blueprint Complet</CardTitle>
+                <CardDescription>Documentation complète du projet</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Contient toute l'architecture du projet, le schéma de base de données, 
+              les edge functions, les composants React, et les instructions de configuration.
+            </p>
+            <div className="grid gap-3 sm:grid-cols-3">
               <Button 
                 onClick={() => handleDownload('PROJECT_BLUEPRINT.md')} 
                 className="w-full"
               >
                 <Download className="w-4 h-4 mr-2" />
-                Télécharger PROJECT_BLUEPRINT.md
+                Markdown (.md)
               </Button>
-            </CardContent>
-          </Card>
+              <Button 
+                onClick={handleDownloadTXT} 
+                variant="outline"
+                className="w-full"
+              >
+                <File className="w-4 h-4 mr-2" />
+                Texte (.txt)
+              </Button>
+              <Button 
+                onClick={handleDownloadPDF} 
+                variant="secondary"
+                className="w-full"
+                disabled={generating}
+              >
+                <FileType className="w-4 h-4 mr-2" />
+                {generating ? 'Génération...' : 'PDF (.pdf)'}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
 
-          <Card className="hover:shadow-lg transition-shadow">
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <div className="p-3 rounded-lg bg-green-500/10">
-                  <Code className="w-6 h-6 text-green-500" />
-                </div>
-                <div>
-                  <CardTitle>Schéma JSON</CardTitle>
-                  <CardDescription>Configuration structurée</CardDescription>
-                </div>
+        {/* Schema Downloads */}
+        <Card className="hover:shadow-lg transition-shadow">
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <div className="p-3 rounded-lg bg-green-500/10">
+                <Code className="w-6 h-6 text-green-500" />
               </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Fichier JSON contenant la structure complète du projet, 
-                utilisable pour l'automatisation et la génération de code.
-              </p>
-              <ul className="text-sm space-y-1 text-muted-foreground">
-                <li>• Configuration technique</li>
-                <li>• Définitions des tables</li>
-                <li>• Relations et contraintes</li>
-                <li>• Routes de l'application</li>
-                <li>• Liste des composants</li>
-                <li>• Hooks personnalisés</li>
-              </ul>
+              <div>
+                <CardTitle>Schéma JSON</CardTitle>
+                <CardDescription>Configuration structurée</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Fichier JSON contenant la structure complète du projet, 
+              utilisable pour l'automatisation et la génération de code.
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2">
               <Button 
                 onClick={() => handleDownload('project-schema.json')} 
                 variant="outline"
                 className="w-full"
               >
                 <Download className="w-4 h-4 mr-2" />
-                Télécharger project-schema.json
+                JSON (.json)
               </Button>
-            </CardContent>
-          </Card>
-        </div>
+              <Button 
+                onClick={handleDownloadJSONTXT} 
+                variant="outline"
+                className="w-full"
+              >
+                <File className="w-4 h-4 mr-2" />
+                Texte (.txt)
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
 
+        {/* Instructions Card */}
         <Card className="border-dashed">
           <CardHeader>
             <div className="flex items-center gap-3">
@@ -131,7 +270,7 @@ export default function ExportDocs() {
               <div className="p-4 rounded-lg bg-muted/50">
                 <h4 className="font-semibold mb-2">2. Copier le contenu du Blueprint</h4>
                 <p className="text-muted-foreground">
-                  Envoyez le contenu du fichier PROJECT_BLUEPRINT.md à Lovable en demandant: 
+                  Envoyez le contenu du fichier PROJECT_BLUEPRINT à Lovable en demandant: 
                   "Recréez ce projet en suivant exactement cette documentation"
                 </p>
               </div>
