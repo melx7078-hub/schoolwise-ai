@@ -1,0 +1,19 @@
+{
+  "name": "SchoolSync Africa",
+  "short_name": "SchoolSync",
+  "description": "Modern school management system for African educational institutions",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1E3A8A",
+  "theme_color": "#1E3A8A",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64",
+      "type": "image/x-icon"
+    }
+  ],
+  "categories": ["education", "productivity"],
+  "lang": "en"
+}
