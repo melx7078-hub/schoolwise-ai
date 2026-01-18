@@ -1,0 +1,495 @@
+{
+  "projectName": "SysThemPlus",
+  "version": "1.0.0",
+  "createdAt": "2026-01-18",
+  "platform": "Lovable + Supabase",
+  "description": "Multi-tenant school management system for low-resource environments",
+  
+  "techStack": {
+    "frontend": {
+      "framework": "React 18.3.1",
+      "buildTool": "Vite",
+      "language": "TypeScript",
+      "styling": ["Tailwind CSS", "Shadcn/UI"],
+      "routing": "React Router DOM 6.x",
+      "stateManagement": "TanStack Query",
+      "icons": "Lucide React",
+      "charts": "Recharts",
+      "notifications": "Sonner"
+    },
+    "backend": {
+      "platform": "Supabase",
+      "database": "PostgreSQL",
+      "auth": "Supabase Auth",
+      "functions": "Deno Edge Functions",
+      "storage": "Supabase Storage"
+    },
+    "ai": {
+      "provider": "Lovable AI Gateway",
+      "defaultModel": "google/gemini-2.5-flash",
+      "supportedModels": [
+        "google/gemini-2.5-flash",
+        "google/gemini-2.5-pro",
+        "openai/gpt-5-mini",
+        "openai/gpt-5"
+      ]
+    }
+  },
+
+  "database": {
+    "enums": {
+      "app_role": ["super_admin", "school_admin", "teacher", "parent", "student"],
+      "attendance_status": ["present", "absent", "late", "excused"],
+      "subscription_status": ["trial", "active", "suspended", "cancelled"]
+    },
+    
+    "tables": [
+      {
+        "name": "schools",
+        "columns": [
+          { "name": "id", "type": "uuid", "primaryKey": true, "default": "gen_random_uuid()" },
+          { "name": "name", "type": "text", "nullable": false },
+          { "name": "code", "type": "text", "nullable": false, "unique": true },
+          { "name": "address", "type": "text", "nullable": true },
+          { "name": "phone", "type": "text", "nullable": true },
+          { "name": "email", "type": "text", "nullable": true },
+          { "name": "logo_url", "type": "text", "nullable": true },
+          { "name": "settings", "type": "jsonb", "default": "{}" },
+          { "name": "subscription_status", "type": "subscription_status", "default": "trial" },
+          { "name": "created_at", "type": "timestamptz", "default": "now()" },
+          { "name": "updated_at", "type": "timestamptz", "default": "now()" }
+        ],
+        "rls": true
+      },
+      {
+        "name": "profiles",
+        "columns": [
+          { "name": "id", "type": "uuid", "primaryKey": true, "references": "auth.users(id)" },
+          { "name": "full_name", "type": "text", "nullable": false },
+          { "name": "email", "type": "text", "nullable": true },
+          { "name": "phone", "type": "text", "nullable": true },
+          { "name": "avatar_url", "type": "text", "nullable": true },
+          { "name": "school_id", "type": "uuid", "references": "schools(id)", "nullable": true },
+          { "name": "created_at", "type": "timestamptz", "default": "now()" },
+          { "name": "updated_at", "type": "timestamptz", "default": "now()" }
+        ],
+        "rls": true,
+        "trigger": "handle_new_user ON auth.users INSERT"
+      },
+      {
+        "name": "user_roles",
+        "columns": [
+          { "name": "id", "type": "uuid", "primaryKey": true, "default": "gen_random_uuid()" },
+          { "name": "user_id", "type": "uuid", "references": "auth.users(id)", "nullable": false },
+          { "name": "role", "type": "app_role", "nullable": false },
+          { "name": "school_id", "type": "uuid", "references": "schools(id)", "nullable": true },
+          { "name": "created_at", "type": "timestamptz", "default": "now()" }
+        ],
+        "rls": true
+      },
+      {
+        "name": "academic_years",
+        "columns": [
+          { "name": "id", "type": "uuid", "primaryKey": true, "default": "gen_random_uuid()" },
+          { "name": "school_id", "type": "uuid", "references": "schools(id)", "nullable": false },
+          { "name": "name", "type": "text", "nullable": false },
+          { "name": "start_date", "type": "date", "nullable": false },
+          { "name": "end_date", "type": "date", "nullable": false },
+          { "name": "is_current", "type": "boolean", "default": false },
+          { "name": "created_at", "type": "timestamptz", "default": "now()" }
+        ],
+        "rls": true
+      },
+      {
+        "name": "classes",
+        "columns": [
+          { "name": "id", "type": "uuid", "primaryKey": true, "default": "gen_random_uuid()" },
+          { "name": "school_id", "type": "uuid", "references": "schools(id)", "nullable": false },
+          { "name": "academic_year_id", "type": "uuid", "references": "academic_years(id)", "nullable": true },
+          { "name": "name", "type": "text", "nullable": false },
+          { "name": "level", "type": "text", "nullable": true },
+          { "name": "capacity", "type": "integer", "default": 50 },
+          { "name": "created_at", "type": "timestamptz", "default": "now()" }
+        ],
+        "rls": true
+      },
+      {
+        "name": "students",
+        "columns": [
+          { "name": "id", "type": "uuid", "primaryKey": true, "default": "gen_random_uuid()" },
+          { "name": "school_id", "type": "uuid", "references": "schools(id)", "nullable": false },
+          { "name": "profile_id", "type": "uuid", "references": "profiles(id)", "nullable": true },
+          { "name": "class_id", "type": "uuid", "references": "classes(id)", "nullable": true },
+          { "name": "matricule", "type": "text", "nullable": true },
+          { "name": "gender", "type": "text", "nullable": true },
+          { "name": "date_of_birth", "type": "date", "nullable": true },
+          { "name": "address", "type": "text", "nullable": true },
+          { "name": "emergency_contact", "type": "text", "nullable": true },
+          { "name": "created_at", "type": "timestamptz", "default": "now()" },
+          { "name": "updated_at", "type": "timestamptz", "default": "now()" }
+        ],
+        "rls": true
+      },
+      {
+        "name": "teachers",
+        "columns": [
+          { "name": "id", "type": "uuid", "primaryKey": true, "default": "gen_random_uuid()" },
+          { "name": "school_id", "type": "uuid", "references": "schools(id)", "nullable": false },
+          { "name": "profile_id", "type": "uuid", "references": "profiles(id)", "nullable": true },
+          { "name": "employee_id", "type": "text", "nullable": true },
+          { "name": "specialization", "type": "text", "nullable": true },
+          { "name": "hire_date", "type": "date", "nullable": true },
+          { "name": "created_at", "type": "timestamptz", "default": "now()" }
+        ],
+        "rls": true
+      },
+      {
+        "name": "subjects",
+        "columns": [
+          { "name": "id", "type": "uuid", "primaryKey": true, "default": "gen_random_uuid()" },
+          { "name": "school_id", "type": "uuid", "references": "schools(id)", "nullable": false },
+          { "name": "name", "type": "text", "nullable": false },
+          { "name": "code", "type": "text", "nullable": true },
+          { "name": "coefficient", "type": "numeric", "default": 1.0 },
+          { "name": "created_at", "type": "timestamptz", "default": "now()" }
+        ],
+        "rls": true
+      },
+      {
+        "name": "teacher_assignments",
+        "columns": [
+          { "name": "id", "type": "uuid", "primaryKey": true, "default": "gen_random_uuid()" },
+          { "name": "teacher_id", "type": "uuid", "references": "teachers(id)", "nullable": false },
+          { "name": "class_id", "type": "uuid", "references": "classes(id)", "nullable": false },
+          { "name": "subject_id", "type": "uuid", "references": "subjects(id)", "nullable": false },
+          { "name": "academic_year_id", "type": "uuid", "references": "academic_years(id)", "nullable": true },
+          { "name": "created_at", "type": "timestamptz", "default": "now()" }
+        ],
+        "rls": true
+      },
+      {
+        "name": "attendance",
+        "columns": [
+          { "name": "id", "type": "uuid", "primaryKey": true, "default": "gen_random_uuid()" },
+          { "name": "student_id", "type": "uuid", "references": "students(id)", "nullable": false },
+          { "name": "class_id", "type": "uuid", "references": "classes(id)", "nullable": false },
+          { "name": "date", "type": "date", "nullable": false },
+          { "name": "status", "type": "attendance_status", "nullable": false },
+          { "name": "notes", "type": "text", "nullable": true },
+          { "name": "recorded_by", "type": "uuid", "references": "auth.users(id)", "nullable": true },
+          { "name": "created_at", "type": "timestamptz", "default": "now()" }
+        ],
+        "rls": true
+      },
+      {
+        "name": "grades",
+        "columns": [
+          { "name": "id", "type": "uuid", "primaryKey": true, "default": "gen_random_uuid()" },
+          { "name": "student_id", "type": "uuid", "references": "students(id)", "nullable": false },
+          { "name": "subject_id", "type": "uuid", "references": "subjects(id)", "nullable": false },
+          { "name": "academic_year_id", "type": "uuid", "references": "academic_years(id)", "nullable": true },
+          { "name": "value", "type": "numeric", "nullable": false },
+          { "name": "max_value", "type": "numeric", "default": 20 },
+          { "name": "coefficient", "type": "numeric", "default": 1.0 },
+          { "name": "grade_type", "type": "text", "nullable": false },
+          { "name": "notes", "type": "text", "nullable": true },
+          { "name": "recorded_by", "type": "uuid", "references": "auth.users(id)", "nullable": true },
+          { "name": "recorded_at", "type": "timestamptz", "default": "now()" }
+        ],
+        "rls": true
+      },
+      {
+        "name": "teacher_invitations",
+        "columns": [
+          { "name": "id", "type": "uuid", "primaryKey": true, "default": "gen_random_uuid()" },
+          { "name": "school_id", "type": "uuid", "references": "schools(id)", "nullable": false },
+          { "name": "email", "type": "text", "nullable": false },
+          { "name": "token", "type": "text", "nullable": false, "unique": true },
+          { "name": "role", "type": "app_role", "default": "teacher" },
+          { "name": "class_ids", "type": "uuid[]", "default": "{}" },
+          { "name": "permissions", "type": "jsonb", "default": "{\"can_view_students\":true,\"can_manage_attendance\":true,\"can_manage_grades\":true}" },
+          { "name": "invited_by", "type": "uuid", "references": "auth.users(id)", "nullable": false },
+          { "name": "status", "type": "text", "default": "pending" },
+          { "name": "expires_at", "type": "timestamptz", "default": "now() + interval '7 days'" },
+          { "name": "accepted_at", "type": "timestamptz", "nullable": true },
+          { "name": "created_at", "type": "timestamptz", "default": "now()" }
+        ],
+        "rls": true
+      },
+      {
+        "name": "teacher_permissions",
+        "columns": [
+          { "name": "id", "type": "uuid", "primaryKey": true, "default": "gen_random_uuid()" },
+          { "name": "teacher_id", "type": "uuid", "references": "teachers(id)", "nullable": false, "unique": true },
+          { "name": "school_id", "type": "uuid", "references": "schools(id)", "nullable": false },
+          { "name": "class_ids", "type": "uuid[]", "default": "{}" },
+          { "name": "can_view_students", "type": "boolean", "default": true },
+          { "name": "can_manage_attendance", "type": "boolean", "default": true },
+          { "name": "can_manage_grades", "type": "boolean", "default": true },
+          { "name": "can_view_reports", "type": "boolean", "default": false },
+          { "name": "can_send_notifications", "type": "boolean", "default": false },
+          { "name": "created_at", "type": "timestamptz", "default": "now()" },
+          { "name": "updated_at", "type": "timestamptz", "default": "now()" }
+        ],
+        "rls": true
+      },
+      {
+        "name": "audit_logs",
+        "columns": [
+          { "name": "id", "type": "uuid", "primaryKey": true, "default": "gen_random_uuid()" },
+          { "name": "school_id", "type": "uuid", "references": "schools(id)", "nullable": true },
+          { "name": "user_id", "type": "uuid", "references": "auth.users(id)", "nullable": false },
+          { "name": "action", "type": "text", "nullable": false },
+          { "name": "table_name", "type": "text", "nullable": false },
+          { "name": "record_id", "type": "uuid", "nullable": true },
+          { "name": "old_data", "type": "jsonb", "nullable": true },
+          { "name": "new_data", "type": "jsonb", "nullable": true },
+          { "name": "ip_address", "type": "text", "nullable": true },
+          { "name": "user_agent", "type": "text", "nullable": true },
+          { "name": "created_at", "type": "timestamptz", "default": "now()" }
+        ],
+        "rls": true
+      },
+      {
+        "name": "parent_students",
+        "columns": [
+          { "name": "id", "type": "uuid", "primaryKey": true, "default": "gen_random_uuid()" },
+          { "name": "parent_id", "type": "uuid", "references": "profiles(id)", "nullable": false },
+          { "name": "student_id", "type": "uuid", "references": "students(id)", "nullable": false },
+          { "name": "relationship", "type": "text", "default": "parent" },
+          { "name": "created_at", "type": "timestamptz", "default": "now()" }
+        ],
+        "rls": true
+      },
+      {
+        "name": "ai_conversations",
+        "columns": [
+          { "name": "id", "type": "uuid", "primaryKey": true, "default": "gen_random_uuid()" },
+          { "name": "user_id", "type": "uuid", "references": "auth.users(id)", "nullable": false },
+          { "name": "school_id", "type": "uuid", "references": "schools(id)", "nullable": true },
+          { "name": "title", "type": "text", "default": "New Conversation" },
+          { "name": "created_at", "type": "timestamptz", "default": "now()" },
+          { "name": "updated_at", "type": "timestamptz", "default": "now()" }
+        ],
+        "rls": true
+      },
+      {
+        "name": "ai_messages",
+        "columns": [
+          { "name": "id", "type": "uuid", "primaryKey": true, "default": "gen_random_uuid()" },
+          { "name": "conversation_id", "type": "uuid", "references": "ai_conversations(id)", "nullable": false },
+          { "name": "role", "type": "text", "nullable": false },
+          { "name": "content", "type": "text", "nullable": false },
+          { "name": "tool_calls", "type": "jsonb", "nullable": true },
+          { "name": "created_at", "type": "timestamptz", "default": "now()" }
+        ],
+        "rls": true
+      },
+      {
+        "name": "system_tools",
+        "columns": [
+          { "name": "id", "type": "uuid", "primaryKey": true, "default": "gen_random_uuid()" },
+          { "name": "tool_name", "type": "text", "nullable": false, "unique": true },
+          { "name": "description", "type": "text", "nullable": false },
+          { "name": "api_endpoint", "type": "text", "nullable": false },
+          { "name": "parameters", "type": "jsonb", "default": "{}" },
+          { "name": "required_role", "type": "app_role[]", "default": "{super_admin}" },
+          { "name": "is_active", "type": "boolean", "default": true },
+          { "name": "created_at", "type": "timestamptz", "default": "now()" }
+        ],
+        "rls": true
+      },
+      {
+        "name": "pending_actions",
+        "columns": [
+          { "name": "id", "type": "uuid", "primaryKey": true, "default": "gen_random_uuid()" },
+          { "name": "user_id", "type": "uuid", "references": "auth.users(id)", "nullable": false },
+          { "name": "school_id", "type": "uuid", "references": "schools(id)", "nullable": true },
+          { "name": "action_type", "type": "text", "nullable": false },
+          { "name": "action_data", "type": "jsonb", "nullable": false },
+          { "name": "status", "type": "text", "default": "pending" },
+          { "name": "resolved_by", "type": "uuid", "references": "auth.users(id)", "nullable": true },
+          { "name": "resolved_at", "type": "timestamptz", "nullable": true },
+          { "name": "created_at", "type": "timestamptz", "default": "now()" }
+        ],
+        "rls": true
+      }
+    ],
+
+    "functions": [
+      {
+        "name": "has_role",
+        "parameters": ["_user_id uuid", "_role app_role", "_school_id uuid DEFAULT NULL"],
+        "returns": "boolean",
+        "language": "sql",
+        "security": "DEFINER"
+      },
+      {
+        "name": "get_user_school_id",
+        "parameters": ["_user_id uuid"],
+        "returns": "uuid",
+        "language": "sql",
+        "security": "DEFINER"
+      },
+      {
+        "name": "user_belongs_to_school",
+        "parameters": ["_user_id uuid", "_school_id uuid"],
+        "returns": "boolean",
+        "language": "sql",
+        "security": "DEFINER"
+      },
+      {
+        "name": "handle_new_user",
+        "parameters": [],
+        "returns": "trigger",
+        "language": "plpgsql",
+        "security": "DEFINER"
+      },
+      {
+        "name": "update_updated_at",
+        "parameters": [],
+        "returns": "trigger",
+        "language": "plpgsql"
+      },
+      {
+        "name": "log_audit_event",
+        "parameters": [],
+        "returns": "trigger",
+        "language": "plpgsql",
+        "security": "DEFINER"
+      },
+      {
+        "name": "generate_invitation_token",
+        "parameters": [],
+        "returns": "text",
+        "language": "plpgsql",
+        "security": "DEFINER"
+      },
+      {
+        "name": "teacher_has_class_access",
+        "parameters": ["_teacher_id uuid", "_class_id uuid"],
+        "returns": "boolean",
+        "language": "sql",
+        "security": "DEFINER"
+      }
+    ]
+  },
+
+  "edgeFunctions": [
+    {
+      "name": "ai-agent",
+      "path": "supabase/functions/ai-agent/index.ts",
+      "verifyJwt": false,
+      "description": "Handles AI conversations with streaming support"
+    },
+    {
+      "name": "invite-teacher",
+      "path": "supabase/functions/invite-teacher/index.ts",
+      "verifyJwt": false,
+      "description": "Creates teacher invitations with secure tokens"
+    },
+    {
+      "name": "accept-invitation",
+      "path": "supabase/functions/accept-invitation/index.ts",
+      "verifyJwt": false,
+      "description": "Processes teacher invitation acceptance"
+    },
+    {
+      "name": "import-csv",
+      "path": "supabase/functions/import-csv/index.ts",
+      "verifyJwt": false,
+      "description": "Bulk imports students/teachers from CSV"
+    },
+    {
+      "name": "setup-super-admin",
+      "path": "supabase/functions/setup-super-admin/index.ts",
+      "verifyJwt": false,
+      "description": "Initializes first super admin"
+    }
+  ],
+
+  "routes": [
+    { "path": "/", "component": "Index", "description": "Landing page" },
+    { "path": "/auth", "component": "Auth", "description": "Login/Signup" },
+    { "path": "/dashboard", "component": "Dashboard", "description": "Main dashboard" },
+    { "path": "/dashboard/students", "component": "StudentsPage", "description": "Student management" },
+    { "path": "/dashboard/teachers", "component": "TeachersPage", "description": "Teacher management" },
+    { "path": "/dashboard/classes", "component": "ClassesPage", "description": "Class management" },
+    { "path": "/dashboard/attendance", "component": "AttendancePage", "description": "Attendance tracking" },
+    { "path": "/dashboard/grades", "component": "GradesPage", "description": "Grade management" },
+    { "path": "/dashboard/academic-years", "component": "AcademicYearPage", "description": "Academic year setup" },
+    { "path": "/dashboard/reports", "component": "ReportsPage", "description": "Analytics & reports" },
+    { "path": "/dashboard/settings", "component": "SettingsPage", "description": "School settings" },
+    { "path": "/setup", "component": "SchoolSetupWizard", "description": "New school setup wizard" },
+    { "path": "/invite/:token", "component": "AcceptInvitation", "description": "Teacher invitation acceptance" }
+  ],
+
+  "components": {
+    "shared": [
+      "DataTable",
+      "CSVImport"
+    ],
+    "dashboard": [
+      "DashboardHeader",
+      "DashboardSidebar",
+      "DashboardStats",
+      "QuickActions",
+      "RecentActivity",
+      "AIAssistant"
+    ],
+    "teachers": [
+      "InviteTeacherModal"
+    ],
+    "welcome": [
+      "WelcomeDialog",
+      "SetupPrompt"
+    ]
+  },
+
+  "hooks": [
+    {
+      "name": "useUserRole",
+      "description": "Manages user roles and permissions",
+      "returns": ["userId", "schoolId", "roles", "isSuperAdmin", "isSchoolAdmin", "isTeacher", "isParent", "isStudent", "isLoading"]
+    },
+    {
+      "name": "useAIAgent",
+      "description": "AI chat functionality with streaming",
+      "returns": ["messages", "isLoading", "error", "sendMessage", "clearMessages"]
+    },
+    {
+      "name": "useSchool",
+      "description": "Current school data",
+      "returns": ["school", "isLoading", "refetch"]
+    }
+  ],
+
+  "userRoles": {
+    "super_admin": {
+      "description": "Platform owner - manages all schools",
+      "permissions": ["manage_schools", "manage_all_users", "view_platform_analytics", "configure_system"]
+    },
+    "school_admin": {
+      "description": "Director/Supervisor - manages their school",
+      "permissions": ["manage_school", "invite_teachers", "manage_classes", "view_reports", "import_data"]
+    },
+    "teacher": {
+      "description": "Teacher - manages assigned classes",
+      "permissions": ["view_students", "manage_attendance", "manage_grades"],
+      "configurable": true
+    },
+    "parent": {
+      "description": "Parent - views children's data",
+      "permissions": ["view_children", "view_grades", "view_attendance"]
+    },
+    "student": {
+      "description": "Student - views own data",
+      "permissions": ["view_own_grades", "view_schedule"]
+    }
+  },
+
+  "superAdmin": {
+    "email": "gbagoulemelchior@gmail.com",
+    "note": "First super admin to be created"
+  }
+}
