@@ -170,6 +170,56 @@ export type Database = {
           },
         ]
       }
+      audit_logs: {
+        Row: {
+          action: string
+          created_at: string | null
+          id: string
+          ip_address: string | null
+          new_data: Json | null
+          old_data: Json | null
+          record_id: string | null
+          school_id: string | null
+          table_name: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string | null
+          id?: string
+          ip_address?: string | null
+          new_data?: Json | null
+          old_data?: Json | null
+          record_id?: string | null
+          school_id?: string | null
+          table_name: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string | null
+          id?: string
+          ip_address?: string | null
+          new_data?: Json | null
+          old_data?: Json | null
+          record_id?: string | null
+          school_id?: string | null
+          table_name?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_logs_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       classes: {
         Row: {
           academic_year_id: string | null
@@ -639,6 +689,116 @@ export type Database = {
           },
         ]
       }
+      teacher_invitations: {
+        Row: {
+          accepted_at: string | null
+          class_ids: string[] | null
+          created_at: string | null
+          email: string
+          expires_at: string
+          id: string
+          invited_by: string
+          permissions: Json | null
+          role: Database["public"]["Enums"]["app_role"]
+          school_id: string
+          status: string | null
+          token: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          class_ids?: string[] | null
+          created_at?: string | null
+          email: string
+          expires_at?: string
+          id?: string
+          invited_by: string
+          permissions?: Json | null
+          role?: Database["public"]["Enums"]["app_role"]
+          school_id: string
+          status?: string | null
+          token: string
+        }
+        Update: {
+          accepted_at?: string | null
+          class_ids?: string[] | null
+          created_at?: string | null
+          email?: string
+          expires_at?: string
+          id?: string
+          invited_by?: string
+          permissions?: Json | null
+          role?: Database["public"]["Enums"]["app_role"]
+          school_id?: string
+          status?: string | null
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teacher_invitations_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      teacher_permissions: {
+        Row: {
+          can_manage_attendance: boolean | null
+          can_manage_grades: boolean | null
+          can_send_notifications: boolean | null
+          can_view_reports: boolean | null
+          can_view_students: boolean | null
+          class_ids: string[] | null
+          created_at: string | null
+          id: string
+          school_id: string
+          teacher_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          can_manage_attendance?: boolean | null
+          can_manage_grades?: boolean | null
+          can_send_notifications?: boolean | null
+          can_view_reports?: boolean | null
+          can_view_students?: boolean | null
+          class_ids?: string[] | null
+          created_at?: string | null
+          id?: string
+          school_id: string
+          teacher_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          can_manage_attendance?: boolean | null
+          can_manage_grades?: boolean | null
+          can_send_notifications?: boolean | null
+          can_view_reports?: boolean | null
+          can_view_students?: boolean | null
+          class_ids?: string[] | null
+          created_at?: string | null
+          id?: string
+          school_id?: string
+          teacher_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teacher_permissions_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teacher_permissions_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: true
+            referencedRelation: "teachers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       teachers: {
         Row: {
           created_at: string | null
@@ -721,6 +881,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      generate_invitation_token: { Args: never; Returns: string }
       get_user_school_id: { Args: { _user_id: string }; Returns: string }
       has_role: {
         Args: {
@@ -728,6 +889,10 @@ export type Database = {
           _school_id?: string
           _user_id: string
         }
+        Returns: boolean
+      }
+      teacher_has_class_access: {
+        Args: { _class_id: string; _teacher_id: string }
         Returns: boolean
       }
       user_belongs_to_school: {

@@ -1,1 +1,16 @@
 project_id = "dhbzqahqovrczzntksdm"
+
+[functions.ai-agent]
+verify_jwt = false
+
+[functions.invite-teacher]
+verify_jwt = false
+
+[functions.accept-invitation]
+verify_jwt = false
+
+[functions.import-csv]
+verify_jwt = false
+
+[functions.setup-super-admin]
+verify_jwt = false

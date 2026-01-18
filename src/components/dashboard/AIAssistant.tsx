@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -11,20 +11,16 @@ import {
   Sparkles,
   Search,
   FileText,
-  Bell
+  Bell,
+  Trash2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAIAgent } from "@/hooks/useAIAgent";
 
 interface AIAssistantProps {
   isOpen: boolean;
   onClose: () => void;
-}
-
-interface Message {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-  timestamp: Date;
+  schoolId?: string;
 }
 
 const suggestedQuestions = [
@@ -33,43 +29,22 @@ const suggestedQuestions = [
   { icon: Bell, text: "Draft parent notification" },
 ];
 
-export function AIAssistant({ isOpen, onClose }: AIAssistantProps) {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "1",
-      role: "assistant",
-      content: "Hello! I'm your AI assistant for SchoolSync. I can help you search student records, summarize academic trends, and draft notifications for parents. How can I help you today?",
-      timestamp: new Date(),
-    },
-  ]);
+export function AIAssistant({ isOpen, onClose, schoolId }: AIAssistantProps) {
+  const { messages, isLoading, error, sendMessage, clearMessages } = useAIAgent(schoolId);
   const [input, setInput] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages]);
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
-
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      role: "user",
-      content: input.trim(),
-      timestamp: new Date(),
-    };
-
-    setMessages((prev) => [...prev, userMessage]);
+    const message = input;
     setInput("");
-    setIsLoading(true);
-
-    // Simulate AI response (in production, this would call the edge function)
-    setTimeout(() => {
-      const aiResponse: Message = {
-        id: (Date.now() + 1).toString(),
-        role: "assistant",
-        content: "I understand you're looking for assistance. The AI features are being set up and will be available soon. In the meantime, you can use the dashboard to manage your school data directly.",
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, aiResponse]);
-      setIsLoading(false);
-    }, 1500);
+    await sendMessage(message);
   };
 
   const handleSuggestedQuestion = (text: string) => {
@@ -92,18 +67,29 @@ export function AIAssistant({ isOpen, onClose }: AIAssistantProps) {
               <p className="text-xs text-white/70">Powered by SchoolSync</p>
             </div>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onClose}
-            className="text-white hover:bg-white/20"
-          >
-            <X size={20} />
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={clearMessages}
+              className="text-white hover:bg-white/20"
+              title="Clear conversation"
+            >
+              <Trash2 size={18} />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onClose}
+              className="text-white hover:bg-white/20"
+            >
+              <X size={20} />
+            </Button>
+          </div>
         </div>
 
         {/* Messages */}
-        <ScrollArea className="flex-1 p-4">
+        <ScrollArea className="flex-1 p-4" ref={scrollRef}>
           <div className="space-y-4">
             {messages.map((message) => (
               <div
@@ -121,21 +107,15 @@ export function AIAssistant({ isOpen, onClose }: AIAssistantProps) {
                       : "bg-secondary text-secondary-foreground"
                   )}
                 >
-                  {message.role === "assistant" ? (
-                    <Bot size={16} />
-                  ) : (
-                    <User size={16} />
-                  )}
+                  {message.role === "assistant" ? <Bot size={16} /> : <User size={16} />}
                 </div>
                 <div
                   className={cn(
                     "rounded-2xl px-4 py-3 max-w-[80%]",
-                    message.role === "assistant"
-                      ? "bg-muted"
-                      : "bg-primary text-primary-foreground"
+                    message.role === "assistant" ? "bg-muted" : "bg-primary text-primary-foreground"
                   )}
                 >
-                  <p className="text-sm">{message.content}</p>
+                  <p className="text-sm whitespace-pre-wrap">{message.content}</p>
                 </div>
               </div>
             ))}
@@ -148,6 +128,12 @@ export function AIAssistant({ isOpen, onClose }: AIAssistantProps) {
                 <div className="bg-muted rounded-2xl px-4 py-3">
                   <Loader2 className="w-4 h-4 animate-spin" />
                 </div>
+              </div>
+            )}
+
+            {error && (
+              <div className="text-center text-sm text-destructive bg-destructive/10 rounded-lg p-2">
+                {error}
               </div>
             )}
           </div>
@@ -190,12 +176,7 @@ export function AIAssistant({ isOpen, onClose }: AIAssistantProps) {
               className="flex-1"
               disabled={isLoading}
             />
-            <Button
-              type="submit"
-              size="icon"
-              disabled={!input.trim() || isLoading}
-              variant="hero"
-            >
+            <Button type="submit" size="icon" disabled={!input.trim() || isLoading} variant="hero">
               <Send size={18} />
             </Button>
           </form>
