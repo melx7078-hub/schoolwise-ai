@@ -3,6 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import ExportDocs from "@/pages/ExportDocs";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
@@ -23,6 +24,7 @@ const App = () => (
           <Route path="/auth" element={<Auth />} />
           <Route path="/invite/:token" element={<AcceptInvitation />} />
           <Route path="/setup" element={<SchoolSetupWizard />} />
+          <Route path="/export-docs" element={<ExportDocs />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/dashboard/*" element={<Dashboard />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
